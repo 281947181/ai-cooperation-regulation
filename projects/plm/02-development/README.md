@@ -157,22 +157,33 @@ http://localhost:18080
 
 ## 环境与提交限制
 
-不得提交：
+`.gitignore` 已明确忽略以下内容，Codex 不得将其作为正式代码提交：
 
 ```text
 node_modules/
 target/
 dist/
+.vite/
+.npm/
+.pnpm-store/
 真实 .env
-日志
-数据库数据卷
-ONLYOFFICE 运行数据卷
-上传文件
-密钥
-证书
+tmp/
+temp/
+logs/
+*.log
+docker-data/
+mysql-data/
+redis-data/
+uploads/
+deploy/onlyoffice/data/
 ```
 
-前端实际 `.env.*` 文件不提交，只提交 `.example` 模板。
+说明：
+
+- `backend/target/plm-server.jar` 是后端发布产物，但不提交到 Git。
+- `frontend/dist/` 是前端发布产物，但不提交到 Git。
+- 前端实际 `.env.*` 文件不提交，只提交 `.example` 模板。
+- 部署、传输和运行产物应通过发布流程处理，不应混入源码提交。
 
 ## 依赖管理
 
@@ -190,7 +201,9 @@ ONLYOFFICE 运行数据卷
 - 依赖树由 `frontend/package-lock.json` 锁定。
 - Univer 相关依赖已固定兼容版本，避免图标导出不兼容导致构建失败。
 - ONLYOFFICE 前端脚本由 Document Server 提供，不在前端 package 依赖中安装。
-- 不得直接执行 `npm audit fix --force`，因为可能触发 ECharts 大版本升级和插件破坏性降级。
+- 当前 `npm audit` 存在 4 个中危、5 个高危漏洞。
+- 不得直接执行 `npm audit fix --force`，因为可能触发 ECharts 6 大版本升级和插件破坏性降级。
+- 前端依赖安全升级必须作为单独任务评估影响。
 
 ## Docker 与部署开发
 
@@ -203,6 +216,14 @@ ONLYOFFICE 运行数据卷
 - 遵守配置、数据、日志外置原则。
 - 遵守镜像稳定、业务内容可替换原则。
 - 不提交密钥、真实 `.env`、数据库文件、上传文件和运行日志。
+
+ONLYOFFICE 部署修改必须遵守：
+
+- 固定使用 `onlyoffice/documentserver:9.0.4`，不得使用 `latest`。
+- 生产环境必须修改 `ONLYOFFICE_JWT_SECRET`，并同步后端 `onlyoffice.jwt-secret`。
+- 生产环境必须使用 HTTPS。
+- 不将 ONLYOFFICE 服务裸露到公网非 HTTPS 端口。
+- 后端 `onlyoffice.plm-public-url` 必须填写容器可访问的 PLM 后端地址，不能只填写浏览器可访问但容器无法访问的地址。
 
 ## Codex 修改边界
 
