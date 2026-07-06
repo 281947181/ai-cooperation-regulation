@@ -125,7 +125,7 @@ https://preview.willexp.tech:12358
 
 ### 前端依赖安全升级
 
-当前 `npm audit` 仍存在中危和高危漏洞。
+当前 `npm audit` 仍存在 4 个中危、5 个高危漏洞。
 
 不得直接执行：
 
