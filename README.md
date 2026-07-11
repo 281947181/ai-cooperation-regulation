@@ -6,11 +6,12 @@
 
 ## 仓库定位
 
-本仓库只维护三类公开内容：
+本仓库只维护四类公开内容：
 
 1. `constitution.md`：个人顶层开发规约，适用于所有项目。
 2. `runtime.md`：AI Agent 运行规约，约束 Codex 等执行型 Agent 的工作方式。
-3. `tasks/`：任务模板。只提供生成单轮任务提示词的结构模板，不保存具体任务提示词。
+3. `docker-runtime.md`：Docker 运行态强制补充规约，约束每轮代码任务结束后的挂载文件更新、镜像重建、容器重启或重新创建及运行态验证。
+4. `tasks/`：任务模板。只提供生成单轮任务提示词的结构模板，不保存具体任务提示词。
 
 ## 不在本仓库维护的内容
 
@@ -29,7 +30,7 @@
 
 存在远程仓库的项目，项目根目录应采用以下文档分工模式：
 
-1. 外部规约仓库：维护通用协作规则，即本仓库的 `constitution.md`、`runtime.md` 和 `tasks/` 模板。
+1. 外部规约仓库：维护通用协作规则，即本仓库的 `constitution.md`、`runtime.md`、`docker-runtime.md` 和 `tasks/` 模板。
 2. `AGENTS.md`：项目专属地图、长期边界和 Agent 入口。用于说明项目结构、技术栈、长期约束、禁止事项、关键入口和协作方式。
 3. `PROJECT_BASELINE.md`：当前阶段动态基线。用于记录当前阶段目标、已验收事实、最新决策、当前风险、下一轮任务输入和验收后需要继承的状态。
 4. `docs/`：已验收历史事实、架构决策、专题设计、部署说明、接口说明、运维说明和其他长期文档。
@@ -47,18 +48,19 @@
 
 1. 引用 `constitution.md`。
 2. 引用 `runtime.md`。
-3. 在具体项目仓库根目录建立 `AGENTS.md`。
-4. 在具体项目仓库根目录建立 `PROJECT_BASELINE.md`。
-5. 在具体项目仓库中建立 `docs/`，用于保存已验收历史事实、架构决策、专题设计和部署说明。
+3. 引用 `docker-runtime.md`。
+4. 在具体项目仓库根目录建立 `AGENTS.md`。
+5. 在具体项目仓库根目录建立 `PROJECT_BASELINE.md`。
+6. 在具体项目仓库中建立 `docs/`，用于保存已验收历史事实、架构决策、专题设计和部署说明。
 
 单轮任务开始时：
 
 1. 先同步目标项目远程仓库最新代码。
-2. 读取本仓库的 `constitution.md`、`runtime.md`。
+2. 读取本仓库的 `constitution.md`、`runtime.md` 和 `docker-runtime.md`。
 3. 读取具体项目仓库中的 `AGENTS.md`、`PROJECT_BASELINE.md` 和任务相关 `docs/`。
 4. 参考 `tasks/` 模板生成本轮任务提示词。
 5. 由 Codex 执行具体开发。
-6. Codex 完成后按任务模板要求汇报。
+6. Codex 完成后按任务模板和 Docker 运行态规约要求汇报。
 7. ChatGPT 或人工进行验收。
 8. 验收通过后，由 ChatGPT 作为上一轮任务验收者和下一轮任务设计者，明确 `PROJECT_BASELINE.md` 的更新要求；需要 Codex 落地修改时，必须纳入下一轮或本轮收尾任务并提交推送。
 
