@@ -536,9 +536,19 @@ Subagent 不得修改应用源码、业务配置或 Git 历史，不得 `git add
 
 实现、最终验证、Docker 收尾、文档判断、commit、push 并确认远程包含当前 HEAD 后，才能发送：
 
+Task Contract 可通过以下字段控制自动验收：
+
+```text
+acceptance_bridge: required | optional | disabled
+acceptance_target_key: <canonical repository key>
+acceptance_response_timeout_seconds: <positive integer>
+```
+
+`required` 将取得身份匹配的有效 Result 作为任务闭环条件；`optional` 允许 Bridge 失败后明确回退人工交付；`disabled` 禁止自动发送。`acceptance_target_key` 必须与请求 repository 的规范化 key 及本地唯一启用映射完全一致，不得模糊匹配。
+
 ```text
 [CODEX_ACCEPTANCE_REQUEST]
-protocol_version:
+protocol_version: 1
 task_contract_id:
 task_contract_version:
 task_contract_hash:
@@ -572,7 +582,7 @@ Commit Resolution 状态统一为：`FOUND` 表示远程指定分支包含并可
 
 ### 19.3 结果与自动化边界
 
-有效的 ChatGPT 验收响应使用 `[CODEX_ACCEPTANCE_RESULT]`，至少包含 `protocol_version`、合同身份、`review_id`、`contract_resolution`、`commit_resolution`、`verdict`、`contract_checks`、`issues` 和 `next_action`。其中 `verdict` 只允许 `PASS`、`REWORK`、`BLOCKED`。
+有效的 ChatGPT 验收响应使用 `[CODEX_ACCEPTANCE_RESULT]`，至少包含 `protocol_version`、合同身份、`review_id`、`repository`、`branch`、`commit`、`contract_resolution`、`commit_resolution`、`verdict`、`contract_checks`、`issues` 和 `next_action`。其中 `verdict` 只允许 `PASS`、`REWORK`、`BLOCKED`。repository、branch、commit 及 `review_id` 必须同时与 Request 身份匹配，不能仅凭 `commit_resolution` 推断。
 
 Acceptance 状态语义固定如下：
 
@@ -582,7 +592,9 @@ Acceptance 状态语义固定如下：
 - `DELIVERY_FAILED`：Git 交付已经完成，但 Acceptance Request 未成功送达固定 ChatGPT 验收目标。
 - `RESPONSE_TIMEOUT`：请求已确认送达，但在自动化允许窗口内未取得有效 Acceptance Result。
 - `INVALID_RESPONSE`：收到响应，但协议、`review_id`、Contract 身份或必要字段无法匹配本次请求。
+- `IDENTITY_MISMATCH`：同一 `review_id` 对应不同 Request Digest，或响应中的 repository、branch、commit、Contract 身份与已准备请求冲突。
+- `TARGET_NOT_FOUND`：不存在唯一启用的精确 repository 映射，或固定 ChatGPT 目标身份验证失败。
 
-后三者是 Acceptance Bridge 在本地生成的 `bridge_status`，不是 ChatGPT 的 `verdict`，也不得伪造 `[CODEX_ACCEPTANCE_RESULT]`。Bridge 记录至少保存 `protocol_version`、`review_id`、请求时间、`bridge_status`、错误证据和后续动作；只有收到身份匹配、协议有效的响应后，`bridge_status=DELIVERED` 并解析 ChatGPT verdict。V1 中 `REWORK`、`BLOCKED` 或任一 Bridge 失败状态都停止自动执行，禁止无人控制的无限返工循环。
+以上 Bridge 失败状态由本地生成，不是 ChatGPT 的 `verdict`，也不得伪造 `[CODEX_ACCEPTANCE_RESULT]`。Bridge 记录至少保存 `protocol_version`、`review_id`、请求时间、`bridge_status`、错误证据和后续动作；只有收到身份匹配、协议有效的响应后，才能解析并持久化 ChatGPT verdict。V1 中 `REWORK`、`BLOCKED` 或任一 Bridge 失败状态都停止自动执行，禁止无人控制的无限返工循环。
 
-本阶段只落地协议，不绑定私人 ChatGPT 对话、浏览器、Cookie、Token 或自动发送实现。未来 Bridge 必须使用固定目标和 `review_id` 幂等，验证 host、conversation target、发送成功及返回身份，失败不得假装成功。
+自动交付与回收由用户级 `$acceptance-bridge` Skill 执行。确定性 repository 规范化、Request Digest、SQLite 幂等状态和 Result 校验必须由 Skill 脚本承担；浏览器只负责一次性绑定、固定 URL 身份验证、单次送达确认和有界结果回收。私人 target 与状态只保存在 `~/.codex/review-bridge/`，不得写入 Git。发送后必须从实际渲染的用户消息确认同一 `review_id`；`SENT`、`DELIVERED` 或 `RESPONSE_TIMEOUT` 恢复时先查固定对话，禁止直接重发。

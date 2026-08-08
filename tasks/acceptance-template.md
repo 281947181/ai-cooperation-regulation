@@ -262,6 +262,9 @@ task_contract_id: {{id}}
 task_contract_version: {{version}}
 task_contract_hash: {{hash}}
 review_id: {{review_id}}
+repository: {{canonical repository key}}
+branch: {{exact branch}}
+commit: {{40-character lowercase Git SHA}}
 contract_resolution: FOUND_EXACT | NOT_FOUND | AMBIGUOUS | HASH_MISMATCH
 commit_resolution: FOUND | NOT_FOUND | MISMATCH
 verdict: PASS | REWORK | BLOCKED
@@ -281,7 +284,7 @@ Bridge 未能取得有效响应时，不生成上述 ChatGPT Result；由本地 
 [CODEX_ACCEPTANCE_BRIDGE_STATUS]
 protocol_version: {{版本}}
 review_id: {{review_id}}
-bridge_status: DELIVERY_FAILED | RESPONSE_TIMEOUT | INVALID_RESPONSE
+bridge_status: DELIVERY_FAILED | RESPONSE_TIMEOUT | INVALID_RESPONSE | IDENTITY_MISMATCH | TARGET_NOT_FOUND
 evidence: {{错误或超时证据}}
 next_action: {{动作}}
 ```

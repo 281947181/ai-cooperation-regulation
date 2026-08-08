@@ -10,7 +10,7 @@
 
 1. `constitution.md`：个人顶层开发规约，适用于所有项目。
 2. `runtime.md`：AI Agent 运行规约，约束 Codex 等执行型 Agent 的完整工作方式，包括任务启动、代码修改、构建测试、Docker 运行态收尾、汇报、提交与推送。
-3. `tasks/`：任务设计与模板规约。用于约束单轮任务提示词的分级、粒度、阅读范围和结构，不保存具体任务提示词。
+3. `tasks/`：任务设计与模板规约。用于约束单轮任务提示词的分级、粒度、阅读范围和结构；`tasks/contracts/` 只保存本规约项目自身需要远程恢复的 PERSISTED Contract。
 
 其中 `tasks/task-template.md` 同时包含任务分级、提示词粒度、按需阅读原则和单轮任务结构，是生成单轮开发任务提示词时的统一入口。
 
@@ -20,7 +20,7 @@
 
 - 每个项目的具体业务代码。
 - 每个项目的项目级规约。
-- 每轮任务的具体 Prompt。
+- 其他项目或不需要 PERSISTED 恢复的每轮具体 Prompt。
 - 临时排查记录。
 - 项目运行日志。
 - 项目私有配置、密钥、证书。
@@ -87,4 +87,4 @@ ChatGPT 需求判断/架构设计
   → PASS / REWORK / BLOCKED
 ```
 
-Remote Git Commit 是实现事实源，Task Contract 是需求事实源；Codex 汇报只是索引和摘要。V1 推荐 `luna_explorer` 负责只读调查、`terra_reviewer` 负责只读独立预审，Codex 主代理保持唯一默认 Writer。Acceptance Bridge 本轮只定义协议，不绑定私人对话 URL、Cookie、Token 或浏览器会话。
+Remote Git Commit 是实现事实源，Task Contract 是需求事实源；Codex 汇报只是索引和摘要。V1 推荐 `luna_explorer` 负责只读调查、`terra_reviewer` 负责只读独立预审，Codex 主代理保持唯一默认 Writer。自动验收由用户级 `$acceptance-bridge` Skill 执行；公开仓库只维护协议、模板与本项目 PERSISTED Contract，私人对话 URL、Project ID、Cookie、Token、浏览器会话和 SQLite 状态只保存在用户本地。

@@ -151,6 +151,18 @@ Hash 输入是 Contract Issuer 最终签发的**完整 Markdown Task Contract �
 
 缺少该字段、出现重复字段或无法按上述规则唯一定位时，Issuer 不得签发，Consumer 必须将 Contract Resolution 判为 `HASH_MISMATCH`。唯一 Bootstrap 豁免固定为 `task_contract_id=AICR-20260808-001`、`task_contract_version=1` 且 `task_contract_hash=BOOTSTRAP-NOT-ENFORCED`；任何其他 ID、Version 或 Hash 均不得声明或继承该豁免。
 
+### 4.1.2 Acceptance Bridge 控制（按需）
+
+需要自动交付 ChatGPT 验收时，Task Contract 增加：
+
+```text
+acceptance_bridge: required | optional | disabled
+acceptance_target_key: <canonical repository key>
+acceptance_response_timeout_seconds: <positive integer>
+```
+
+只有 `required` 才把 `$acceptance-bridge` 取得有效 Result 作为闭环条件。`optional` 失败时可以回退人工交付但必须明确报告；`disabled` 不得自动发送。Target key 必须是精确规范化 key，不得写私人 conversation URL、Project ID 或浏览器会话信息。
+
 ## 5. 任务背景
 
 S 级任务无必要背景时可省略。其他等级只保留理解本轮任务所必需的背景。
