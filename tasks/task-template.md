@@ -115,6 +115,29 @@ runtime.md
 任务类型：{{feature | bugfix | refactor | docs | deploy | investigation | other}}
 ```
 
+## 4.1 Task Contract（正式任务可用）
+
+L、XL、高风险 M 或需要多 Agent 时，任务必须提供以下身份字段；简单 S/M 可按需省略：
+
+```text
+task_contract_id: {{PROJECT-YYYYMMDD-序号}}
+task_contract_version: {{整数}}
+task_contract_hash: {{SHA-256，排除本字段自身}}
+issuer: ChatGPT
+project: {{project_name}}
+repository: {{project_repository}}
+target_branch: {{target_branch}}
+task_level: {{S | M | L | XL}}
+contract_mode: {{INLINE | PERSISTED}}
+task_contract_locator: {{确定性恢复位置}}
+task_mode: {{investigation | implementation | validation | mixed}}
+execution_model: {{实际 model ID}}
+execution_reasoning: {{实际 reasoning}}
+execution_speed: {{standard | fast}}
+```
+
+`id` 是业务任务稳定身份，`version` 是合同版本，`hash` 绑定该版本正文。Hash canonicalization 固定为：合同正文使用 UTF-8、LF、明确的稳定序列化规则，并排除 `task_contract_hash` 字段自身后计算 SHA-256。Codex 不得自行修改身份字段。`INLINE` 依赖可精确恢复的原始上下文，`PERSISTED` 将合同保存于目标项目的任务记录中；无法精确恢复时不得继续验收。
+
 ## 5. 任务背景
 
 S 级任务无必要背景时可省略。其他等级只保留理解本轮任务所必需的背景。
@@ -219,6 +242,31 @@ Codex 完成后按 `runtime.md` 的汇报规范输出结果。
 ```
 
 如无额外汇报要求，填写“无”。
+
+## 14.1 执行配置与 Subagent Work Package（按需）
+
+仅在任务确实需要时增加，不把所有任务机械扩展成大型 Prompt：
+
+```text
+主代理：model / reasoning / speed
+允许子代理：luna_explorer / terra_reviewer
+并行策略：只读并行或串行
+源码写入责任人：Codex 主代理
+任务升级条件：{{触发重新签发 Contract 的条件}}
+
+工作包 A
+Agent：{{agent}}
+类型：read-only
+目标：{{明确目标}}
+允许读取范围：{{范围}}
+禁止修改范围：{{范围}}
+期望输出：事实、路径、证据、结论
+停止条件：发现超出合同边界时立即返回
+```
+
+Subagent 只能执行边界明确、可独立返回证据的工作，不得替代主代理的架构判断或最终验证。
+
+当 `task_mode=investigation` 时，允许动作和交付物应明确为只读证据；不得因为默认开发闭环而强制修改、提交、推送或 Docker 操作。提交与推送要求仅适用于合同明确要求实现交付的模式。
 
 ## 15. 强制禁止条款
 

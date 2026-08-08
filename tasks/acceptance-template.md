@@ -32,6 +32,33 @@ Push 状态：已推送 / 未推送 / 不适用
 验收人：{{reviewer}}
 ```
 
+## 1.1 Task Contract 与 Acceptance 身份
+
+```text
+Task Contract ID：{{task_contract_id}}
+Task Contract Version：{{task_contract_version}}
+Task Contract Hash：{{task_contract_hash}}
+Task Contract Locator：{{task_contract_locator}}
+Task Mode：{{investigation | implementation | validation | mixed}}
+Contract Resolution：FOUND_EXACT / NOT_FOUND / AMBIGUOUS / HASH_MISMATCH
+Review ID：{{task_contract_id}}/{{branch}}/{{commit-short-sha}}
+```
+
+验收必须先恢复原始 Contract 并校验 Hash。只有 `FOUND_EXACT` 且 Hash 匹配，才能读取 Remote Git Commit 进入实现验收；其余状态直接 `BLOCKED`。
+
+## 1.2 Multi-Agent 核对
+
+```text
+是否使用 Subagent：是 / 否
+是否符合 Contract 允许范围：是 / 否 / 不适用
+是否存在未经授权的 Subagent 写入：是 / 否
+是否存在多个 Agent 并行修改共享源码：是 / 否
+Codex 主代理是否检查最终 diff：是 / 否 / 无法确认
+Codex 主代理是否执行最终验证：是 / 否 / 无法确认
+Subagent 重大风险是否闭环：是 / 否 / 不适用
+Terra Reviewer findings 是否已处理或解释：是 / 否 / 不适用
+```
+
 ## 2. 远程协作基线核对
 
 ```text
@@ -80,15 +107,20 @@ PROJECT_BASELINE.md 是否仍反映当前阶段状态：是 / 否 / 无法确认
 逐条核对本轮任务目标。
 
 ```text
-目标 1：通过 / 未通过 / 部分通过
-说明：{{goal_1_result}}
+AC-01：{{稳定验收项 ID}}
+requirement：{{合同原文或精确引用}}
+result：PASS / FAIL / PARTIAL
+evidence：{{Remote Commit 中的文件、测试或运行证据}}
 
-目标 2：通过 / 未通过 / 部分通过
-说明：{{goal_2_result}}
+AC-02：{{稳定验收项 ID}}
+requirement：{{合同原文或精确引用}}
+result：PASS / FAIL / PARTIAL
+evidence：{{证据}}
 
-目标 3：通过 / 未通过 / 部分通过
-说明：{{goal_3_result}}
+AC-N：按合同实际数量继续，不得机械限制为三项。
 ```
+
+`task_mode=investigation` 时改验收：检查是否未写入文件、未提交/推送、未越过读取范围，且返回证据覆盖每个 AC；不把“未推送”判为失败。
 
 ## 6. 修改范围核对
 
@@ -220,6 +252,23 @@ PROJECT_BASELINE.md 更新要求：
 ```
 
 如果验收通过，后续动作必须说明下一轮是否以更新后的 `PROJECT_BASELINE.md` 为输入。
+
+## 13.1 机器可识别结果
+
+```text
+[CODEX_ACCEPTANCE_RESULT]
+protocol_version: {{版本}}
+task_contract_id: {{id}}
+task_contract_version: {{version}}
+task_contract_hash: {{hash}}
+review_id: {{review_id}}
+contract_resolution: FOUND_EXACT | NOT_FOUND | AMBIGUOUS | HASH_MISMATCH
+commit_resolution: FOUND | NOT_FOUND | MISMATCH
+verdict: PASS | REWORK | BLOCKED | DELIVERY_FAILED | RESPONSE_TIMEOUT | INVALID_RESPONSE
+next_action: {{动作}}
+```
+
+验收分为 Contract Resolution、Implementation Inspection、Contract Compliance Acceptance 三阶段。`PASS` 不能由 Terra Review 替代；`REWORK` 和 `BLOCKED` 在 V1 默认停止自动执行，禁止无限返工循环。
 
 ## 14. 退回修改要求
 

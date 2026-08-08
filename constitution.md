@@ -195,6 +195,16 @@ Codex 不应自行扩大任务边界。需要扩大边界时，必须先汇报�
 7. ChatGPT 或人工验收：基于远程仓库最新提交、Codex 汇报、规约和项目文档进行验收；未通过时明确退回修改要求和禁止修改范围。
 8. ChatGPT 更新项目 `PROJECT_BASELINE.md` 的当前内容和下一步计划：验收通过后，判断本轮交付是否改变当前阶段动态基线；如果改变，必须更新或明确要求更新当前事实、风险、设计边界、下一轮输入和下一步计划。
 
+### 13.2 多 Agent 治理与单写入者原则
+
+Subagent 是 Codex 内部执行资源，不是新的需求决策者、架构设计者或最终验收者。Codex 主代理仍是本轮唯一最终负责人，必须亲自确认最终 diff、验证、Docker 运行态、文档、`PROJECT_BASELINE.md`、commit 和 push。
+
+默认情况下，同一工作区同一时间只有一个 Agent 承担应用源码写入责任。只读 Agent 可以并行搜索、分析、核实和 Review；多个 Agent 不得并行修改共享应用源码。`git add`、`git commit` 和 `git push` 默认只能由 Codex 主代理执行。
+
+Subagent 不得重定义或扩大 ChatGPT 签发的 Task Contract。发现架构、数据、权限、安全、兼容性或生产风险时，必须返回事实、证据和需要重新判断的问题；如果需要改变合同，必须停止并返回 ChatGPT 重新签发。
+
+Task Contract 应明确 `task_mode`（`investigation`、`implementation`、`validation` 或 `mixed`）及允许动作。只读调查可以合法地不写文件、不提交、不推送；默认开发交付闭环不应覆盖合同明确的只读边界。`PROJECT_BASELINE.md` 的最终事实由 ChatGPT/验收者决定；需要落地修改时，由下一份或当前合同明确授权 Codex 主代理作为唯一 Writer 执行，避免双方并行写入。
+
 该生命周期是默认最小闭环。任何一环缺失，都必须在汇报或验收结论中说明原因；未提交推送、未验证、未验收或未处理动态基线的任务，不应被视为完整闭环。
 
 ## 14. 默认技术偏好

@@ -68,3 +68,23 @@
 ## 核心原则
 
 先做对的事，再争取把事情做对。
+
+## Regulation 2.0 工作流
+
+```text
+ChatGPT 需求判断/架构设计
+  → Task Contract（ID + Version + Hash + Locator）
+  → Codex 主代理
+  → 按需调度只读 Subagents
+  → Single Writer
+  → diff / test / Docker / docs
+  → commit + push
+  → Remote Git
+  → Acceptance Bridge
+  → ChatGPT 先恢复并校验原始 Contract
+  → 读取指定 Remote Commit
+  → Contract Acceptance
+  → PASS / REWORK / BLOCKED
+```
+
+Remote Git Commit 是实现事实源，Task Contract 是需求事实源；Codex 汇报只是索引和摘要。V1 推荐 `luna_explorer` 负责只读调查、`terra_reviewer` 负责只读独立预审，Codex 主代理保持唯一默认 Writer。Acceptance Bridge 本轮只定义协议，不绑定私人对话 URL、Cookie、Token 或浏览器会话。

@@ -130,9 +130,7 @@ Codex 不能仅凭 Prompt 自动切换本次请求的模型、推理强度或响
 4. 执行 `git pull --ff-only` 同步当前分支。
 5. 阅读本轮任务要求。
 6. 阅读外部规约仓库中的 `constitution.md` 和 `runtime.md`。
-7. 阅读当前项目根目录的 `AGENTS.md`。
-8. 阅读当前项目根目录的 `PROJECT_BASELINE.md`。
-9. 阅读当前项目 `docs/` 中与本轮任务直接相关的文档。
+7. 按 Task Contract 的 `task_mode` 和 `read_scope` 阅读当前项目根目录的 `AGENTS.md`、`PROJECT_BASELINE.md` 及相关 `docs/`；S 级或只读调查不需要无条件读取无关项目文档。
 10. 制定最小执行计划。
 11. 按本文件“模型资源调度规范”判断当前配置是否匹配任务复杂度。
 
@@ -140,7 +138,7 @@ Codex 不能仅凭 Prompt 自动切换本次请求的模型、推理强度或响
 
 如果 `git pull --ff-only` 失败，必须停止开发并汇报原因，不得基于分叉或未知状态继续修改。
 
-如果项目缺少 `AGENTS.md` 或 `PROJECT_BASELINE.md`，且本轮任务依赖项目级协作边界或当前阶段状态，必须先汇报缺口。除非任务明确要求补建这些文件，否则不得自行编造项目基线。
+如果项目缺少 `AGENTS.md` 或 `PROJECT_BASELINE.md`，且本轮 Task Contract 依赖项目级协作边界或当前阶段状态，必须先汇报缺口。除非任务明确要求补建这些文件，否则不得自行编造项目基线。
 
 ## 4. 项目文档读取与维护规范
 
@@ -495,3 +493,76 @@ Codex 完成任务后，必须按以下结构汇报：
 - 应当重建镜像并重新创建服务时，仅执行普通重启。
 - 为了省事无差别重启、删除或重建全部容器。
 - 未完成 Docker 运行态更新和验证，却声称任务已经整体完成。
+
+## 18. Regulation 2.0 模型与 Subagent 调度
+
+### 18.1 任务规模与认知复杂度解耦
+
+S/M/L/XL 表示实际影响范围；模型、Reasoning 和 Subagent 数量表示解决问题所需的认知复杂度与执行资源，二者不得机械绑定。小范围安全或权限任务仍可能需要 High；大范围机械整理可能适合低判断密度 Agent。
+
+风险标记至少包括：`SECURITY`、`DATA`、`AUTH`、`CONCURRENCY`、`COMPATIBILITY`、`PRODUCTION`、`THIRD_FAILURE`。风险标记可使主代理升级 Reasoning，但“需要更强的脑子”不等于“需要更多执行人手”：主代理能力不足时应升级主代理，不得用大量低成本 Subagent 绕过核心判断。
+
+### 18.2 委派边界与职责去重
+
+只有目标、输入、输出、边界和停止条件明确，且工作可独立完成、不依赖共享写状态、不重新定义 Contract、能以事实或证据返回时，才适合委派。优先委派文件/符号定位、调用链、日志、测试证据、官方文档核实和独立 Review；默认不委派核心架构、权限/数据模型、重大安全、迁移和跨模块设计。
+
+不同 Agent 默认不得重复同一分析。重复只允许用于独立 Review、安全复核、关键结论交叉验证或父代理明确要求的第二意见。不得为了增加 Agent 数量而委派。
+
+### 18.3 V1 Agent 架构与 Single Writer
+
+```text
+Codex 主代理
+  ├─ luna_explorer：read-only 调查与证据
+  └─ terra_reviewer：read-only 独立 Correctness Review
+          ↓
+Codex 主代理：唯一默认源码 Writer、最终集成者
+```
+
+Subagent 不得修改应用源码、业务配置或 Git 历史，不得 `git add/commit/push`，不得扩大 Contract。第一阶段不创建或启用 `luna_patcher`。Terra Review 是代码正确性预审，不能替代 ChatGPT 的 Contract Acceptance。
+
+### 18.4 主代理最终集成清单
+
+任务结束前主代理必须确认 `git status --short`、`git diff --stat`、目标 diff、无关修改、最终测试/构建、Docker 运行态、文档与 `PROJECT_BASELINE`、commit 和 push。Subagent 报告成功不能替代主代理最终验证。
+
+## 19. Task Contract 与 Acceptance Bridge
+
+### 19.1 合同身份与事实源
+
+正式 Task Contract 至少包含 `task_contract_id`、`task_contract_version`、`task_contract_hash`、`issuer`、`project`、`repository`、`target_branch`、`task_level`、`contract_mode` 和 `task_contract_locator`。ID 是业务任务稳定身份，Version 是版本，Hash 是正文绑定。Hash 使用 UTF-8、LF、稳定 canonicalization、排除自身字段后的 SHA-256；Codex 不得自行改写身份字段。
+
+`INLINE` 必须通过 locator 精确恢复原始上下文；`PERSISTED` 可将具体合同存入目标项目任务记录（例如 `tasks/contracts/<id>.md`），公共规约仓库只定义规范，不保存其他项目合同。Locator 不得伪造不稳定的对话 URL。
+
+### 19.2 Acceptance Bridge 顺序
+
+实现、最终验证、Docker 收尾、文档判断、commit、push 并确认远程包含当前 HEAD 后，才能发送：
+
+```text
+[CODEX_ACCEPTANCE_REQUEST]
+protocol_version:
+task_contract_id:
+task_contract_version:
+task_contract_hash:
+task_contract_mode:
+task_contract_locator:
+review_id: <TaskContractID>/<branch>/<commit-short-sha>
+repository:
+branch:
+commit:
+task_title:
+task_level:
+codex_result:
+```
+
+Codex 汇报不得重新定义 Contract。ChatGPT 收到请求后必须依次执行：
+
+1. Contract Resolution：读取 ID、Version、Locator，恢复原始需求/目标/非目标/范围/验收标准/风险/Agent 边界并校验 Hash。
+2. Implementation Inspection：读取指定 Remote Git Commit 的 commit、diff、代码、测试、配置、Docker 和文档。
+3. Contract Compliance Acceptance：逐条把实现映射回原 Contract。
+
+Resolution 状态统一为 `FOUND_EXACT`、`NOT_FOUND`、`AMBIGUOUS`、`HASH_MISMATCH`；后三者均为 `BLOCKED`，不得凭记忆继续验收。需求事实源是 Task Contract，实现事实源是指定 Remote Git Commit，Codex 汇报只是摘要。
+
+### 19.3 结果与自动化边界
+
+结果 Envelope 使用 `[CODEX_ACCEPTANCE_RESULT]`，至少包含 `protocol_version`、合同身份、`review_id`、`contract_resolution`、`commit_resolution`、`verdict`、`contract_checks`、`issues` 和 `next_action`。Verdict 为 `PASS`、`REWORK`、`BLOCKED`，必要时可为 `DELIVERY_FAILED`、`RESPONSE_TIMEOUT`、`INVALID_RESPONSE`。V1 中 `REWORK` 或 `BLOCKED` 默认停止自动执行，禁止无人控制的无限返工循环。
+
+本阶段只落地协议，不绑定私人 ChatGPT 对话、浏览器、Cookie、Token 或自动发送实现。未来 Bridge 必须使用固定目标和 `review_id` 幂等，验证 host、conversation target、发送成功及返回身份，失败不得假装成功。
