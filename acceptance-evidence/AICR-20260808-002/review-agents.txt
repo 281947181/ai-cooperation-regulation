@@ -1,0 +1,33 @@
+Corrective evidence review captured: 2026-08-08 Asia/Shanghai
+
+Luna read-only audit
+- canonical task: /root/evidence_audit
+- agent type: luna_explorer
+- write authority: none
+- scope: evidence completeness, reproducibility, privacy, and factual consistency
+- result: mandatory evidence/boundary items covered; found incorrect parent SHA,
+  non-executable Python placeholder, and missing Skill snapshot binding
+- resolution: corrected parent SHA, replaced the interpreter placeholder, and
+  added SHA-256 values for every tested Skill file
+
+Terra read-only review
+- canonical task: /root/evidence_review
+- agent type: terra_reviewer
+- write authority: none
+- scope: independent correctness review of the evidence package against the
+  signed Task Contract and actual local Bridge state
+- result: found status-semantics conflict, reproducibility gaps, missing Skill
+  snapshot binding, and insufficient disclosure of agent evidence
+- resolution: changed canonical task status from acceptance semantics to
+  PARTIAL + INVALID_RESPONSE; preserved the human reviewer conclusion only as
+  reviewer metadata; added executable interpreter/dependency commands, Skill
+  hashes, and this agent evidence record
+- post-fix review: no remaining Blocker or Major; optional Minor is that Codex
+  discovery is a current-session observation rather than a portable CLI output
+
+Evidence boundary
+- These agents reviewed the corrective evidence package in this iteration.
+- This record does not retroactively prove the original implementation-time
+  T-14/AC-14 agent calls for commit aa002290cea99c7afdaeca41ffce5f9714867fd9.
+- No private target identity, conversation content, credential, or raw SQLite
+  row was supplied to either review output.

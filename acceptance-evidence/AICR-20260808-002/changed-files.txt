@@ -1,0 +1,21 @@
+Reviewed commit: aa002290cea99c7afdaeca41ffce5f9714867fd9
+Parent commit:   437838646e5a07fdc553139187ad448657aa2b0e
+
+M	README.md
+M	runtime.md
+M	tasks/acceptance-template.md
+A	tasks/contracts/AICR-20260808-002.md
+M	tasks/task-template.md
+
+Diff stat:
+ README.md                            |   6 +-
+ runtime.md                           |  20 +-
+ tasks/acceptance-template.md         |   5 +-
+ tasks/contracts/AICR-20260808-002.md | 458 +++++++++++++++++++++++++++++++++++
+ tasks/task-template.md               |  12 +
+ 5 files changed, 493 insertions(+), 8 deletions(-)
+
+Reproduce:
+ git show --name-status --format=fuller aa002290cea99c7afdaeca41ffce5f9714867fd9
+ git show --stat aa002290cea99c7afdaeca41ffce5f9714867fd9
+ git diff 437838646e5a07fdc553139187ad448657aa2b0e aa002290cea99c7afdaeca41ffce5f9714867fd9

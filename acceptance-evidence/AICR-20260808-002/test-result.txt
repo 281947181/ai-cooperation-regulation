@@ -1,0 +1,108 @@
+Acceptance Bridge V1 offline verification evidence
+Captured: 2026-08-08 Asia/Shanghai
+Reviewed commit: aa002290cea99c7afdaeca41ffce5f9714867fd9
+Tested Skill snapshot: see SHA-256 values in skill-tree.txt
+
+1. Deterministic state/protocol/concurrency/privacy tests
+
+Command:
+ /usr/bin/python3 ~/.codex/skills/acceptance-bridge/scripts/test_bridge_state.py -v
+
+Interpreter:
+ Python 3.9.6
+
+Result:
+ test_binding_requires_all_browser_verifications_and_writes_0600 ... ok
+ test_claimed_crash_requires_absence_recovery_before_retry ... ok
+ test_claimed_crash_with_rendered_request_recovers_delivery_and_result ... ok
+ test_claimed_target_failure_requires_owner_token ... ok
+ test_delivery_retry_is_capped_at_two_claims ... ok
+ test_sent_without_rendered_proof_cannot_timeout_or_accept_result ... ok
+ test_t01_repository_variants_canonicalize ... ok
+ test_t02_missing_target_stops_before_claim ... ok
+ test_t03_target_identity_mismatch_stops ... ok
+ test_t04_live_send_guard_blocks_absence_recovery ... ok
+ test_t04_only_one_concurrent_claim ... ok
+ test_t05_same_digest_never_reprepares_send ... ok
+ test_t06_different_digest_is_identity_mismatch ... ok
+ test_t07_sent_interruption_recovers_without_resend ... ok
+ test_t08_timeout_only_recovers ... ok
+ test_t09_valid_pass_persists ... ok
+ test_t10_rework_and_blocked_stop ... ok
+ test_t11_identity_mismatch_result_is_rejected ... ok
+ test_t12_conflicting_results_are_invalid ... ok
+ test_t13_arbitrary_error_text_is_digest_only ... ok
+ test_t13_public_status_does_not_contain_private_target ... ok
+
+ Ran 21 tests in 0.206s
+ OK
+
+2. Skill structure validation
+
+Dependency setup command:
+ /Users/zc/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
+   -m pip install --target /private/tmp/aicr-validation-deps PyYAML==6.0.3
+
+Command:
+ PYTHONPATH=/private/tmp/aicr-validation-deps \
+   /Users/zc/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 \
+   ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+   ~/.codex/skills/acceptance-bridge
+
+Dependency note:
+ PyYAML 6.0.3 was installed only under /private/tmp/aicr-validation-deps because
+ the bundled validator imports yaml and the available Python runtimes did not
+ include PyYAML.
+
+Result:
+ Skill is valid!
+
+3. Python compilation
+
+Command:
+ PYTHONPYCACHEPREFIX=/private/tmp/aicr-pycache \
+   /Users/zc/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m py_compile \
+   ~/.codex/skills/acceptance-bridge/scripts/bridge_state.py \
+   ~/.codex/skills/acceptance-bridge/scripts/test_bridge_state.py
+
+Result:
+ PASS (exit code 0; no output)
+
+4. Task Contract canonical hash
+
+Command:
+ ruby -rdigest -e 's=File.binread(ARGV[0]); s=s.byteslice(3..) if s.start_with?("\xEF\xBB\xBF".b); s=s.force_encoding(Encoding::UTF_8).gsub("\r\n", "\n").gsub("\r", "\n"); abort unless s.scan(/^task_contract_hash:[^\n]*$/).length==1; puts Digest::SHA256.hexdigest(s.sub(/^task_contract_hash:[^\n]*$/, "task_contract_hash:"))' \
+   tasks/contracts/AICR-20260808-002.md
+
+Expected and recomputed:
+ bb498113a128228d8db3d1d60c091e9ffcdb732cd2384f54fb3ad934ec6076cb
+
+Result:
+ PASS
+
+5. Git integrity
+
+Commands:
+ git diff --check
+ git status --short --branch
+ git ls-remote origin refs/heads/main
+
+Results before adding this evidence package:
+ git diff --check: PASS
+ local:  main...origin/main
+ remote: aa002290cea99c7afdaeca41ffce5f9714867fd9 refs/heads/main
+
+6. End-to-end limitation
+
+T-15 is not recorded as passed. This file proves offline implementation checks;
+it does not claim a verified browser delivery and structured Result round trip.
+
+Bridge status captured for the reviewed review_id:
+ status: INVALID_RESPONSE
+ attempt_count: 1
+ result_digest: null
+ verdict: null
+
+The supplied natural-language conditional review is useful human feedback, but
+it is not a valid `[CODEX_ACCEPTANCE_RESULT]` envelope and therefore was not
+converted into PASS, REWORK, or BLOCKED by the strict parser.
