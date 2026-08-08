@@ -41,7 +41,7 @@ Task Contract Hash：{{task_contract_hash}}
 Task Contract Locator：{{task_contract_locator}}
 Task Mode：{{investigation | implementation | validation | mixed}}
 Contract Resolution：FOUND_EXACT / NOT_FOUND / AMBIGUOUS / HASH_MISMATCH
-Review ID：{{task_contract_id}}/{{branch}}/{{commit-short-sha}}
+Review ID：{{task_contract_id}}/{{percent-encoded-branch}}/{{commit-full-sha}}
 ```
 
 验收必须先恢复原始 Contract 并校验 Hash。只有 `FOUND_EXACT` 且 Hash 匹配，才能读取 Remote Git Commit 进入实现验收；其余状态直接 `BLOCKED`。
@@ -264,11 +264,27 @@ task_contract_hash: {{hash}}
 review_id: {{review_id}}
 contract_resolution: FOUND_EXACT | NOT_FOUND | AMBIGUOUS | HASH_MISMATCH
 commit_resolution: FOUND | NOT_FOUND | MISMATCH
-verdict: PASS | REWORK | BLOCKED | DELIVERY_FAILED | RESPONSE_TIMEOUT | INVALID_RESPONSE
+verdict: PASS | REWORK | BLOCKED
+contract_checks:
+  AC-01: PASS | FAIL | PARTIAL
+  AC-N: PASS | FAIL | PARTIAL
+issues:
+  - {{issue_or_empty}}
 next_action: {{动作}}
 ```
 
 验收分为 Contract Resolution、Implementation Inspection、Contract Compliance Acceptance 三阶段。`PASS` 不能由 Terra Review 替代；`REWORK` 和 `BLOCKED` 在 V1 默认停止自动执行，禁止无限返工循环。
+
+Bridge 未能取得有效响应时，不生成上述 ChatGPT Result；由本地 Bridge 单独记录：
+
+```text
+[CODEX_ACCEPTANCE_BRIDGE_STATUS]
+protocol_version: {{版本}}
+review_id: {{review_id}}
+bridge_status: DELIVERY_FAILED | RESPONSE_TIMEOUT | INVALID_RESPONSE
+evidence: {{错误或超时证据}}
+next_action: {{动作}}
+```
 
 ## 14. 退回修改要求
 

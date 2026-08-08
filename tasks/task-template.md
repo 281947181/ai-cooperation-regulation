@@ -136,7 +136,20 @@ execution_reasoning: {{实际 reasoning}}
 execution_speed: {{standard | fast}}
 ```
 
-`id` 是业务任务稳定身份，`version` 是合同版本，`hash` 绑定该版本正文。Hash canonicalization 固定为：合同正文使用 UTF-8、LF、明确的稳定序列化规则，并排除 `task_contract_hash` 字段自身后计算 SHA-256。Codex 不得自行修改身份字段。`INLINE` 依赖可精确恢复的原始上下文，`PERSISTED` 将合同保存于目标项目的任务记录中；无法精确恢复时不得继续验收。
+`id` 是业务任务稳定身份，`version` 是合同版本，`hash` 绑定该版本正文。Codex 不得自行修改身份字段。`INLINE` 依赖可精确恢复的原始上下文，`PERSISTED` 将合同保存于目标项目的任务记录中；无法精确恢复时不得继续验收。
+
+### 4.1.1 Task Contract Hash canonicalization
+
+Hash 输入是 Contract Issuer 最终签发的**完整 Markdown Task Contract 源文本**，不是字段子集、渲染结果或代码块摘录。计算步骤固定如下：
+
+1. 将源文本解码为 UTF-8；如果开头存在 UTF-8 BOM，删除 BOM。
+2. 将所有 CRLF 和单独 CR 统一为 LF；不做 Unicode 归一化。
+3. 在完成换行规范化后，完整源文本必须且只能有一行匹配正则 `^task_contract_hash:[^\n]*$`（多行模式）。将该匹配行冒号后的全部内容删除，使整行精确变为 `task_contract_hash:`；保留该行原有 LF。
+4. 除上一步外，字段顺序、空行、缩进、尾随空格和正文全部保持不变。
+5. 保持源文本原本是否具有文件末尾 LF：原来有则保留，原来没有则不添加。
+6. 对所得 UTF-8 字节序列计算 SHA-256，输出 64 位小写十六进制字符串。
+
+缺少该字段、出现重复字段或无法按上述规则唯一定位时，Issuer 不得签发，Consumer 必须将 Contract Resolution 判为 `HASH_MISMATCH`。唯一 Bootstrap 豁免固定为 `task_contract_id=AICR-20260808-001`、`task_contract_version=1` 且 `task_contract_hash=BOOTSTRAP-NOT-ENFORCED`；任何其他 ID、Version 或 Hash 均不得声明或继承该豁免。
 
 ## 5. 任务背景
 

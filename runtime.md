@@ -528,7 +528,7 @@ Subagent 不得修改应用源码、业务配置或 Git 历史，不得 `git add
 
 ### 19.1 合同身份与事实源
 
-正式 Task Contract 至少包含 `task_contract_id`、`task_contract_version`、`task_contract_hash`、`issuer`、`project`、`repository`、`target_branch`、`task_level`、`contract_mode` 和 `task_contract_locator`。ID 是业务任务稳定身份，Version 是版本，Hash 是正文绑定。Hash 使用 UTF-8、LF、稳定 canonicalization、排除自身字段后的 SHA-256；Codex 不得自行改写身份字段。
+正式 Task Contract 至少包含 `task_contract_id`、`task_contract_version`、`task_contract_hash`、`issuer`、`project`、`repository`、`target_branch`、`task_level`、`contract_mode` 和 `task_contract_locator`。ID 是业务任务稳定身份，Version 是版本，Hash 是正文绑定。Hash 必须严格使用 `tasks/task-template.md` 的完整 Markdown canonicalization 算法计算；Codex 不得自行改写身份字段。
 
 `INLINE` 必须通过 locator 精确恢复原始上下文；`PERSISTED` 可将具体合同存入目标项目任务记录（例如 `tasks/contracts/<id>.md`），公共规约仓库只定义规范，不保存其他项目合同。Locator 不得伪造不稳定的对话 URL。
 
@@ -542,15 +542,20 @@ protocol_version:
 task_contract_id:
 task_contract_version:
 task_contract_hash:
-task_contract_mode:
+task_contract_mode:  # 值取自 Contract 的 contract_mode 字段
 task_contract_locator:
-review_id: <TaskContractID>/<branch>/<commit-short-sha>
+review_id: <TaskContractID>/<percent-encoded-branch>/<commit-full-sha>
 repository:
 branch:
 commit:
 task_title:
 task_level:
 codex_result:
+主要修改:
+最终验证:
+Docker运行态:
+PROJECT_BASELINE:
+已知风险:
 ```
 
 Codex 汇报不得重新定义 Contract。ChatGPT 收到请求后必须依次执行：
@@ -561,8 +566,23 @@ Codex 汇报不得重新定义 Contract。ChatGPT 收到请求后必须依次执
 
 Resolution 状态统一为 `FOUND_EXACT`、`NOT_FOUND`、`AMBIGUOUS`、`HASH_MISMATCH`；后三者均为 `BLOCKED`，不得凭记忆继续验收。需求事实源是 Task Contract，实现事实源是指定 Remote Git Commit，Codex 汇报只是摘要。
 
+Commit Resolution 状态统一为：`FOUND` 表示远程指定分支包含并可读取该提交；`NOT_FOUND` 表示提交不存在或不可读取；`MISMATCH` 表示提交存在，但与请求中的仓库、分支或 `review_id` 身份不一致。后两者均使最终 verdict 为 `BLOCKED`。
+
+`review_id` 中分支名按 UTF-8 字节进行 RFC 3986 percent-encoding，斜杠必须编码为 `%2F`；commit 使用 40 位小写完整 Git SHA。该规则避免含 `/` 的分支名产生解析歧义，并使幂等键与提交身份唯一绑定。
+
 ### 19.3 结果与自动化边界
 
-结果 Envelope 使用 `[CODEX_ACCEPTANCE_RESULT]`，至少包含 `protocol_version`、合同身份、`review_id`、`contract_resolution`、`commit_resolution`、`verdict`、`contract_checks`、`issues` 和 `next_action`。Verdict 为 `PASS`、`REWORK`、`BLOCKED`，必要时可为 `DELIVERY_FAILED`、`RESPONSE_TIMEOUT`、`INVALID_RESPONSE`。V1 中 `REWORK` 或 `BLOCKED` 默认停止自动执行，禁止无人控制的无限返工循环。
+有效的 ChatGPT 验收响应使用 `[CODEX_ACCEPTANCE_RESULT]`，至少包含 `protocol_version`、合同身份、`review_id`、`contract_resolution`、`commit_resolution`、`verdict`、`contract_checks`、`issues` 和 `next_action`。其中 `verdict` 只允许 `PASS`、`REWORK`、`BLOCKED`。
+
+Acceptance 状态语义固定如下：
+
+- `PASS`：Contract 与指定 Remote Git Commit 均已解析，所有必须验收项满足，可以进入项目基线。
+- `REWORK`：Contract 有效且提交可读取，但实现存在必须修复的合同不符合项；V1 停止自动执行，等待明确返工指令。
+- `BLOCKED`：无法进行有效验收，例如 Contract 未找到、有歧义、Hash 不一致、指定提交不存在或身份无法绑定。
+- `DELIVERY_FAILED`：Git 交付已经完成，但 Acceptance Request 未成功送达固定 ChatGPT 验收目标。
+- `RESPONSE_TIMEOUT`：请求已确认送达，但在自动化允许窗口内未取得有效 Acceptance Result。
+- `INVALID_RESPONSE`：收到响应，但协议、`review_id`、Contract 身份或必要字段无法匹配本次请求。
+
+后三者是 Acceptance Bridge 在本地生成的 `bridge_status`，不是 ChatGPT 的 `verdict`，也不得伪造 `[CODEX_ACCEPTANCE_RESULT]`。Bridge 记录至少保存 `protocol_version`、`review_id`、请求时间、`bridge_status`、错误证据和后续动作；只有收到身份匹配、协议有效的响应后，`bridge_status=DELIVERED` 并解析 ChatGPT verdict。V1 中 `REWORK`、`BLOCKED` 或任一 Bridge 失败状态都停止自动执行，禁止无人控制的无限返工循环。
 
 本阶段只落地协议，不绑定私人 ChatGPT 对话、浏览器、Cookie、Token 或自动发送实现。未来 Bridge 必须使用固定目标和 `review_id` 幂等，验证 host、conversation target、发送成功及返回身份，失败不得假装成功。
