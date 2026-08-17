@@ -151,7 +151,33 @@ Hash 输入是 Contract Issuer 最终签发的**完整 Markdown Task Contract �
 
 缺少该字段、出现重复字段或无法按上述规则唯一定位时，Issuer 不得签发，Consumer 必须将 Contract Resolution 判为 `HASH_MISMATCH`。唯一 Bootstrap 豁免固定为 `task_contract_id=AICR-20260808-001`、`task_contract_version=1` 且 `task_contract_hash=BOOTSTRAP-NOT-ENFORCED`；任何其他 ID、Version 或 Hash 均不得声明或继承该豁免。
 
-### 4.1.2 Acceptance Bridge 控制（按需）
+### 4.1.2 Task Contract Locator 可移植性与共享可解析性
+
+`task_contract_locator` 是 Contract Acceptance 的跨执行环境接口，不是 Codex 本机的文件提示。只要任务启用 Acceptance Bridge，Locator 就必须满足“验收目标可独立解析”：在不访问 Codex 本机文件系统、临时附件目录、浏览器缓存或原执行会话私有状态的前提下，验收目标能够仅依据 Locator 恢复**完全相同的原始 Contract 源文本**并校验 Hash。
+
+以下 Locator 在 `acceptance_bridge=required | optional` 时一律禁止：
+
+- Codex 本机绝对或相对文件路径，例如 `/Users/...`、`/tmp/...`、`~/...`、`C:\...`。
+- `.codex/attachments/`、临时粘贴文件、下载目录、会话附件缓存等仅当前执行机可见的位置。
+- `localhost`、`127.0.0.1`、本机端口、浏览器本地存储、临时 HTTP 服务。
+- 仅当前聊天 UI、浏览器会话或私有运行时才能解释的 opaque ID；不得把“当前上下文里能看到”误当成跨环境可解析。
+- 任何无法由验收目标重新读取并取得原始字节级正文的说明性位置。
+
+自动验收的默认策略如下：
+
+1. `acceptance_bridge=required` 时，Contract **必须使用 `PERSISTED`**，并在 Codex 开始实现前持久化到验收目标可读取的远程事实源；不得使用依赖本地附件或仅原会话上下文的 `INLINE`。
+2. 推荐将 Contract 保存到目标项目仓库的 `tasks/contracts/<task_contract_id>.md`，Locator 使用可由验收目标读取的远程 Git 位置，例如 `git://<owner>/<repo>/<ref>/tasks/contracts/<task_contract_id>.md`。
+3. 优先使用不可变 commit SHA 作为 `<ref>`；如使用分支名，合同文件在签发后必须视为 immutable，不得覆盖原版本。发生正文变化时必须增加 `task_contract_version`、重新计算 Hash，并使用新的可追溯文件或版本位置。
+4. `acceptance_bridge=optional` 仅在 Issuer 能确认验收目标具有同一稳定共享事实源时才允许 `INLINE`；不能确认时同样必须转为 `PERSISTED`。
+5. Contract 必须先完成持久化和可解析性确认，再签发给 Codex；禁止“先让 Codex 开发，结束时再补 Locator”。
+
+签发门禁：ChatGPT/其他 Issuer 在生成正式 Task Contract 时必须检查 Locator 类型和验收目标可访问性。若 Locator 只在执行机本地存在，不得签发带 `required` 或 `optional` Acceptance Bridge 的 Contract。
+
+执行门禁：Codex 在开始 Implementation 前必须检查 `contract_mode`、`acceptance_bridge` 和 `task_contract_locator` 的组合。发现上述禁止 Locator、`required + INLINE`、或远程 Locator 无法读取时，必须立即停止实现并汇报 `CONTRACT_LOCATOR_INVALID` / `CONTRACT_LOCATOR_UNRESOLVABLE`；不得等到代码提交后才把必然 `BLOCKED` 的请求发送给验收目标。
+
+修复既有无效 Locator 时，不得依据 Codex 汇报摘要重建 Contract。若仍能取得**完全相同的原始 Contract 源文本**，可以原样持久化到共享事实源并保持原 Version/Hash；若原始正文已经无法精确恢复，必须签发新 Version 和新 Hash，不得伪装成原 Contract。
+
+### 4.1.3 Acceptance Bridge 控制（按需）
 
 需要自动交付 ChatGPT 验收时，Task Contract 增加：
 
@@ -162,6 +188,8 @@ acceptance_response_timeout_seconds: <positive integer>
 ```
 
 只有 `required` 才把 `$acceptance-bridge` 取得有效 Result 作为闭环条件。`optional` 失败时可以回退人工交付但必须明确报告；`disabled` 不得自动发送。Target key 必须是精确规范化 key，不得写私人 conversation URL、Project ID 或浏览器会话信息。
+
+在调用 `$acceptance-bridge` 前还必须执行 Locator Preflight：确认 Locator 满足 4.1.2，且 `PERSISTED` Contract 当前可从共享事实源读取并按 4.1.1 重新计算得到请求中的 `task_contract_hash`。Preflight 失败时不得发送 Acceptance Request，应先修复 Contract 可解析性；这属于交接协议错误，不属于实现代码验收失败。
 
 ## 5. 任务背景
 
@@ -257,64 +285,3 @@ S 级任务无必要背景时可省略。其他等级只保留理解本轮任务
 ## 14. Codex 汇报要求
 
 Codex 完成后按 `runtime.md` 的汇报规范输出结果。
-
-本轮额外需要汇报：
-
-```text
-- {{extra_report_item_1}}
-- {{extra_report_item_2}}
-- {{extra_report_item_3}}
-```
-
-如无额外汇报要求，填写“无”。
-
-## 14.1 执行配置与 Subagent Work Package（按需）
-
-仅在任务确实需要时增加，不把所有任务机械扩展成大型 Prompt：
-
-```text
-主代理：model / reasoning / speed
-允许子代理：luna_explorer / terra_reviewer
-并行策略：只读并行或串行
-源码写入责任人：Codex 主代理
-任务升级条件：{{触发重新签发 Contract 的条件}}
-
-工作包 A
-Agent：{{agent}}
-类型：read-only
-目标：{{明确目标}}
-允许读取范围：{{范围}}
-禁止修改范围：{{范围}}
-期望输出：事实、路径、证据、结论
-停止条件：发现超出合同边界时立即返回
-```
-
-Subagent 只能执行边界明确、可独立返回证据的工作，不得替代主代理的架构判断或最终验证。
-
-当 `task_mode=investigation` 时，允许动作和交付物应明确为只读证据；不得因为默认开发闭环而强制修改、提交、推送或 Docker 操作。提交与推送要求仅适用于合同明确要求实现交付的模式。
-
-## 15. 强制禁止条款
-
-以下行为默认禁止：
-
-- 机械套用大型开发模板。
-- 提示词长度与任务复杂度明显不成比例。
-- 未说明理由就要求全仓扫描或全架构分析。
-- 未说明任务依赖就强制读取 `PROJECT_BASELINE.md` 或全部项目文档。
-- 对局部修改制定与影响范围无关的全量测试矩阵。
-- 对不涉及运行态的任务强行展开 Docker 与部署分析。
-- 用大量流程描述掩盖不清晰的修改目标、范围和验收标准。
-- 为满足模板字段而编造风险、架构问题或文档更新要求。
-
-## 16. 任务升级规则
-
-执行过程中发现实际影响超出原定文件或模块，或者出现数据迁移、兼容性、权限、安全、生产运行风险、公共基础能力修改、多个调用方影响，以及原定最小验证不足以证明修改正确时，允许升级任务等级。
-
-升级前必须说明：
-
-1. 新发现的事实。
-2. 原任务等级为什么不足。
-3. 需要新增的阅读、修改和验证范围。
-4. 升级后的验收标准。
-
-不得在没有新事实的情况下自行扩大任务等级和执行范围。
