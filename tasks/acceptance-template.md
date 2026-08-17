@@ -46,6 +46,29 @@ Review ID：{{task_contract_id}}/{{percent-encoded-branch}}/{{commit-full-sha}}
 
 验收必须先恢复原始 Contract 并校验 Hash。只有 `FOUND_EXACT` 且 Hash 匹配，才能读取 Remote Git Commit 进入实现验收；其余状态直接 `BLOCKED`。
 
+### 1.1.1 Locator 可解析性前置门禁
+
+在 Contract Resolution 中，验收者必须先判断 `task_contract_locator` 是否属于**验收目标可独立访问的共享事实源**。该判断先于实现代码检查，且不得用 Codex 汇报摘要、记忆或当前聊天中的二手描述代替原 Contract。
+
+以下情况必须判定为不可接受的 Locator：
+
+- `/Users/...`、`/tmp/...`、`~/...`、`C:\...` 等 Codex 本机路径。
+- `.codex/attachments/`、临时粘贴文件、下载目录、会话附件缓存等执行机私有位置。
+- `localhost`、`127.0.0.1`、本机端口、浏览器本地存储或临时 HTTP 服务。
+- 只能在原聊天 UI、原浏览器会话或原运行时中解释的 opaque ID。
+- 任何不能由当前验收目标重新读取完整原始 Contract 源文本的位置。
+
+当 `acceptance_bridge=required` 时，Contract 应为 `PERSISTED`，且 Locator 指向可读取的远程持久化事实源。推荐形式为 `git://<owner>/<repo>/<ref>/tasks/contracts/<task_contract_id>.md`，优先使用不可变 commit SHA 作为 `<ref>`。
+
+若 Request 已经到达验收目标但 Locator 属于上述本地/临时位置，则：
+
+1. `contract_resolution` 必须为 `NOT_FOUND`，最终 `verdict` 必须为 `BLOCKED`。
+2. `issues` 必须明确指出这是 Contract 交接/签发阶段的 Locator 可移植性错误，不得描述为实现代码失败。
+3. 不得继续执行 Implementation Inspection，也不得根据 Codex 汇报反推需求。
+4. 若能够取得**完全相同的原始 Contract 源文本**，应原样持久化到共享事实源并重新验收；若无法精确恢复原文，则必须签发新的 Version 和 Hash。
+
+正常流程中，这类问题应在 Task Contract 签发门禁和 Codex Implementation 前置门禁中被拦截，不应等到提交代码后才暴露。
+
 ## 1.2 Multi-Agent 核对
 
 ```text
@@ -285,7 +308,7 @@ Bridge 未能取得有效响应时，不生成上述 ChatGPT Result；由本地 
 protocol_version: {{版本}}
 review_id: {{review_id}}
 bridge_status: DELIVERY_FAILED | RESPONSE_TIMEOUT | INVALID_RESPONSE | IDENTITY_MISMATCH | TARGET_NOT_FOUND
-evidence: {{错误或超时证据}}
+ evidence: {{错误或超时证据}}
 next_action: {{动作}}
 ```
 
